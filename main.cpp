@@ -35,12 +35,12 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
     int ret = nfq_get_payload(nfa, &payload);
     if(ret > 0)
     {
-        unsigned char *ip_header = payload;
-        unsigned char *tcp_header = payload + 20;
-        unsigned char *http_payload = tcp_header + ((tcp_header[12] >> 4) * 4);
+        unsigned char *ip = payload;
+        unsigned char *tcp = payload + 20;
+        unsigned char *http = tcp + ((tcp[12] >> 4) * 4);
 
-        if (strncmp((char *)http_payload, "GET ", 4) == 0 || strncmp((char *)http_payload, "POST ", 5) == 0) {
-            char *host = strstr((char *)http_payload, "Host: ");
+        if (strncmp((char *)http, "GET ", 4) == 0 || strncmp((char *)http, "POST ", 5) == 0) {
+            char *host = strstr((char *)http, "Host: ");
             if (host)
             {
                 host += 6;
