@@ -35,33 +35,38 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
     int ret = nfq_get_payload(nfa, &payload);
     if(ret > 0)
     {
-        unsigned char *ip = payload;
-        unsigned char *tcp = payload + 20;
-        unsigned char *http = tcp + 20;
+        unsigned char *ip_header = payload;
+        unsigned char *tcp_header = ip_header + ((ip_header[0] & 0x0f) * 4);
 
-        if (strncmp((char *)http, "GET ", 4) == 0 || strncmp((char *)http, "POST ", 5) == 0) {
-            char *host = strstr((char *)http, "Host: ");
-            if (host)
+        if(ip_header[9] == 0x06)
+        {
+            unsigned char *http_payload = tcp_header + ((tcp_header[12] >> 4) * 4);
+
+            if (strncmp((char *)http_payload, "GET ", 4) == 0 || strncmp((char *)http_payload, "POST ", 5) == 0)
             {
-                host += 6;
-                char *endHost = strstr(host, "\r\n");
-                if (endHost) *endHost = '\0';
-
-                char startChar = tolower(host[0]);
-
-                //find time start
-                auto start = std::chrono::high_resolution_clock::now();
-
-                auto findHost = domainInfo.find(startChar);
-                if(findHost != domainInfo.end() && findHost->second.find(host) != findHost->second.end())
+                char *host = strstr((char *)http_payload, "Host: ");
+                if (host)
                 {
-                    auto end = std::chrono::high_resolution_clock::now();
-                    auto diff = end - start;
-                    std::cout << "Time taken to search for domain: " << diff.count() << " seconds" << std::endl;
-                    //find time finish
+                    host += 6;
+                    char *endHost = strstr(host, "\r\n");
+                    if (endHost) *endHost = '\0';
 
-                    std::cout << "Blocking request to " << host << std::endl << std::endl;
-                    return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+                    char startChar = tolower(host[0]);
+
+                    //find time start
+                    auto start = std::chrono::high_resolution_clock::now();
+
+                    auto findHost = domainInfo.find(startChar);
+                    if(findHost != domainInfo.end() && findHost->second.find(host) != findHost->second.end())
+                    {
+                        auto end = std::chrono::high_resolution_clock::now();
+                        auto diff = end - start;
+                        std::cout << "Time taken to search for domain: " << diff.count() << " seconds" << std::endl;
+                        //find time finish
+
+                        std::cout << "Blocking request to " << host << std::endl << std::endl;
+                        return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+                    }
                 }
             }
         }
@@ -92,7 +97,7 @@ void saveDomain(FILE *fs)
 int main(int argc, char *argv[])
 {
     if (argc != 2) {
-        fprintf(stderr, "syntax : netfilter-test <site list file>", argv[0]);
+        fprintf(stderr, "syntax : netfilter-test <site list file>");
         exit(EXIT_FAILURE);
     }
 
