@@ -37,7 +37,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
     {
         unsigned char *ip = payload;
         unsigned char *tcp = payload + 20;
-        unsigned char *http = tcp + ((tcp[12] >> 4) * 4);
+        unsigned char *http = tcp + 20;
 
         if (strncmp((char *)http, "GET ", 4) == 0 || strncmp((char *)http, "POST ", 5) == 0) {
             char *host = strstr((char *)http, "Host: ");
